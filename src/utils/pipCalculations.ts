@@ -1,38 +1,36 @@
 interface PipInfo {
   pipSize: number;
-  pipValue: number;
+  pipValuePerStandardLot: number | null; // If null, calculate dynamically
+  isJPY: boolean;
+  isGold: boolean;
 }
 
 export const getPipInfo = (symbol: string): PipInfo => {
-  // Convert to uppercase and standardize format
   const standardSymbol = symbol.toUpperCase().replace('/', '');
-  
-  // JPY pairs (e.g., USD/JPY at 145.00)
-  // For 1 standard lot (100,000 units):
-  // 1 pip (0.01) = ¥1000 ≈ $6.90 at 145.00
+
   if (standardSymbol.endsWith('JPY') || standardSymbol.startsWith('JPY')) {
     return {
       pipSize: 0.01,
-      pipValue: 1000
+      pipValuePerStandardLot: null, // calculate based on entry price
+      isJPY: true,
+      isGold: false,
     };
   }
-  
-  // Gold (XAU/USD at 2000.00)
-  // For 1 standard lot (100 oz):
-  // 1 pip (0.10) = $10.00
+
   if (standardSymbol === 'XAUUSD') {
     return {
       pipSize: 0.1,
-      pipValue: 10
+      pipValuePerStandardLot: 10,
+      isJPY: false,
+      isGold: true,
     };
   }
-  
-  // Default forex pairs (e.g., EUR/USD at 1.1000)
-  // For 1 standard lot (100,000 units):
-  // 1 pip (0.0001) = $10.00
+
   return {
     pipSize: 0.0001,
-    pipValue: 10
+    pipValuePerStandardLot: 10,
+    isJPY: false,
+    isGold: false,
   };
 };
 
@@ -52,31 +50,32 @@ export const calculatePipsAndProfit = (params: {
   fees: number;
 }): ProfitCalculationResult => {
   const { symbol, direction, entryPrice, exitPrice, lotSize, fees } = params;
-  const { pipSize, pipValue } = getPipInfo(symbol);
-  
-  // Calculate price difference
-  const priceDifference = direction === 'long'
-    ? exitPrice - entryPrice  // For longs: exit - entry
-    : entryPrice - exitPrice; // For shorts: entry - exit
-  
-  // Calculate pip difference
+  const { pipSize, pipValuePerStandardLot, isJPY } = getPipInfo(symbol);
+
+  const priceDifference =
+    direction === 'long' ? exitPrice - entryPrice : entryPrice - exitPrice;
+
   const pipDifference = priceDifference / pipSize;
-  
-  // Calculate profit
-  // Standard lot size is 100,000 for forex, 100 oz for gold
-  // lotSize of 1.0 = 1 standard lot
-  // pipValue is the dollar value per pip for 1 standard lot
-  const profit = (pipDifference * pipValue * lotSize) - fees;
-  
-  // Calculate profit percentage based on margin used
-  // Using standard 1:100 leverage for estimate
-  const marginUsed = entryPrice * lotSize * 1000; // Approximate margin required
+
+  let pipValue: number;
+
+  if (pipValuePerStandardLot !== null) {
+    pipValue = pipValuePerStandardLot * lotSize;
+  } else {
+    // For JPY pairs, calculate pip value dynamically
+    // pip value = (pip size / price) * 100000 * lot size
+    pipValue = ((pipSize / entryPrice) * 100000) * lotSize;
+  }
+
+  const profit = pipDifference * pipValue - fees;
+
+  const marginUsed = entryPrice * lotSize * 1000;
   const profitPercentage = (profit / marginUsed) * 100;
-  
+
   return {
-    pipDifference: Math.abs(pipDifference), // Always positive for display
-    pipValue: pipValue * lotSize, // Pip value for the trade size
+    pipDifference: Math.abs(pipDifference),
+    pipValue,
     profit,
-    profitPercentage
+    profitPercentage,
   };
 };
