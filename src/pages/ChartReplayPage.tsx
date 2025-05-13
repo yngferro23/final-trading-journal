@@ -17,7 +17,7 @@ const ChartReplayPage: React.FC = () => {
 
   const handleTradeSimulated = (trade: SimulatedTrade) => {
     setSimulatedTrades(prev => [...prev, trade]);
-    
+
     // Forward trade data to dashboard and analytics
     dataForwarding.forwardTrade(trade, {
       includeDashboard: true,
@@ -61,6 +61,14 @@ const ChartReplayPage: React.FC = () => {
           <li>• View your simulated trade results in the panel on the right</li>
           <li>• All simulated trades will be reflected in the dashboard and analytics</li>
         </ul>
+      </Card>
+
+      <Card className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 dark:border-yellow-600">
+        <h2 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200">Coming Soon</h2>
+        <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2">
+          Chart Replay is still in development. We’re working hard to bring you a complete simulation experience.
+          Thank you for choosing to journal and grow with us — exciting updates are on the way!
+        </p>
       </Card>
     </div>
   );
